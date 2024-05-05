@@ -1,0 +1,86 @@
+Context Deadline Exceeded is an error occurring in Go when a context of an HTTP request has a deadline or a timeout set,
+i.e., the time after which the request should abort. 
+
+This error is returned if the time of a server response is greater than the set timeout.
+
+                                # https://engineering.grab.com/context-deadlines-and-how-to-set-them
+                                # https://errorsingo.com/context-context-deadline-exceeded/
+
+>>> How to Set Context Deadlines - Let’s recap some of the concepts covered in this article so far:
+
+Timeouts are a time limit on an event taking place, such as a microservice completing an API call to another service.
+
+Request timeouts refer to the timeout of a single individual request. When accounting for retries,
+an API call may include several request timeouts before completing successfully.
+
+Context timeouts are introduced in Go to propagate timeouts across API boundaries.
+
+A context deadline is an absolute timestamp at which the context is considered to be ‘done’, 
+and work covered by this context should be cancelled when the deadline is exceeded.
+==================================================================================================
+WithTimeout is a convenience function for executing WithDeadline(parent, time.Now().Add(timeout)).
+
+The functions differ in how the application specifies the deadline. Otherwise they are the same.
+
+Call the function appropriate for the value you have on hand.
+The first takes a duration after which to cancel from now, the second an absolute time to call cancel.
+===================================================================================================
+As the name suggests, we use the context package whenever we want to pass around “context”, 
+or common scoped data within our application. For example:
+
+                                > Request IDs for function calls and goroutines that are part of an HTTP request call
+                                > Errors when fetching data from a database
+                                > Cancellation signals whe performing async operations using goroutines
+
+Using the Context data type is the idiomatic way to pass information across these kind of operations, such as:
+
+                                > Cancellation signals to terminate the operation
+                                > Miscellaneous data required at every function call invoked by the operation
+
+In short, we need cancellation to prevent our system from doing unnecessary work.
+But, what would happen if the client cancelled the request in the middle? 
+This could happen if, for example, the client closed their browser mid-request.
+===================================================================================================
+Because “cancellation” is highly contextual to the operation being performed, the best way to implement it is through context.
+There are two sides to context cancellation:
+
+                                > Listening for the cancellation event
+                                > Emitting the cancellation event
+
+The Context type provides a Done() method. 
+This returns a channel that receives an empty struct{} type every time the context receives a cancellation event.
+So, to listen for a cancellation event, we need to wait on <- ctx.Done().
+
+If you have an operation that could be cancelled, you will have to emit a cancellation event through the context.
+This can be done using the WithCancel function in the context package, which returns a context object, and a function.
+===================================================================================================
+A Context carries a deadline, a cancellation signal, and other values across API boundaries, as you can see from the context interface.
+
+                                                                            type Context interface {
+                                                                                    Deadline() (deadline time.Time, ok bool)
+                                                                                    Done() <-chan struct{}
+                                                                                    Err() error
+                                                                                    Value(key interface{}) interface{}
+                                                                            }   
+
+                > Deadline() returns the time when this context will be cancelled, if any.
+                > Done() returns a channel that is closed when the context is cancelled or times out.
+                > Err() returns the reason why this contexts was cancelled, after Done() is closed.
+                > Value works like a key-value and is used to share data.
+
+There are pretty much two approaches when you're working with contexts. 
+Either you propagate the original context or create a child context by calling WithCancel, WithDeadline, WithTimeout or WithValue. 
+Whenever you create a child, you receive a new context from the original one, that said, when the original is cancelled, 
+all contexts derived from it are also cancelled.
+===================================================================================================
+<Timeout VS Deadline>
+
+The context will be cancelled after 3 seconds.If it needs to be cancelled earlier, the `cancel` function can be used, like before:
+
+                                            ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+
+Setting a context deadline is similar to setting a timeout, except you specify a time when you want the context to cancel, 
+rather than a duration. Here, the context will be cancelled on 2009-11-10 23:00:00:
+
+                                            ctx, cancel := context.WithDeadline(ctx, time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC))
+

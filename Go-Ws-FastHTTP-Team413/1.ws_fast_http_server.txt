@@ -1,0 +1,20 @@
+package main
+
+import (
+	"websocket-client/router/app"
+	"websocket-client/router/handlers"
+)
+
+func main() {
+	a1 := &app.App{}
+
+	hd := handlers.NewHD()
+	a1.Router = a1.CreateRouterAndSetRoutes(hd)
+	go hd.WebsocketSendHC()
+	a1.Run()
+}
+
+// https://golang.hotexamples.com/examples/github.com.gorilla.websocket/Conn/ReadMessage/golang-conn-readmessage-method-examples.html
+// https://yalantis.com/blog/how-to-build-websockets-in-go/
+// https://gowebexamples.com/websockets/
+// https://golangdocs.com/golang-gorilla-websockets
